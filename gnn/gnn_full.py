@@ -51,11 +51,11 @@ end = "2022-12-31"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-file_path = f'{ticker}_new_company_test.json'
+file_path = f'../{ticker}_new_company_test.json'
 
 data = json.load(open(file_path))
 
-mega_df = pd.read_csv(f"{ticker}_company_only_close_price.csv", index_col=0)
+mega_df = pd.read_csv(f"../{ticker}_company_only_close_price.csv", index_col=0)
 
 # map mega_df to get the new indexes based on the df
 # only need to have it loading from csv
@@ -149,22 +149,23 @@ test_dataset = gcnlstmDataset(test_features_df, test_labels_df, scaler, 2, 1040,
 
 
 # MODEL TIME
-model = LSTMGCN(0, edge_index)
+model = LSTMGCN(0)
 
 
-model.to("cuda")
+edge_index = edge_index.to(device)
+model.to(device)
 
 optimizer=optim.SGD(model.parameters(), lr=learning_rate)
 loss_fn = torch.nn.BCELoss()
-loader = data.DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
+loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 
 
 # Magic
 wandb.watch(model, log_freq=100)
 
 
-model.train()
 for epoch in tqdm(range(1, n_epochs + 1)):
+    model.train()
     for X_batch, y_batch in loader:
         
         y_batch = y_batch.to(device)
@@ -174,7 +175,7 @@ for epoch in tqdm(range(1, n_epochs + 1)):
         
         for x in X_batch:
 
-            y = model(x)
+            y = model(x, edge_index)
 
             if y_pred is None:
                 y_pred = y.t()
@@ -193,12 +194,12 @@ for epoch in tqdm(range(1, n_epochs + 1)):
     y_pred = None
     y_actual = None
     for i in range(len(test_dataset)):
-        x, y = test_dataset
+        x, y = test_dataset[i]
 
         x = x.to("cuda")
         y = y.unsqueeze(0)
 
-        y_hat = model(x)
+        y_hat = model(x, edge_index)
 
         if y_pred is None:
             y_pred = y_hat.t()

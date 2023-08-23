@@ -53,27 +53,25 @@ class gcnlstmDataset(torch.utils.data.Dataset):
 # predict outcome
 
 class LSTMGCN(torch.nn.Module):
-    def __init__(self, target_node, edge_index):
+    def __init__(self, target_node):
         super().__init__()
         self.lstm = torch.nn.LSTM(input_size=2, hidden_size = 50, num_layers=1)
         self.conv1 = GCNConv(50, 16)
         self.relu = torch.nn.ReLU()
         self.conv2 = GCNConv(16, 1)
         self.softmax = torch.nn.Softmax(dim=1)
-        self.edge_index = edge_index
         self.target_node = target_node
         
-        self.edge_index = self.edge_index.to(device)
 
-    def forward(self, data):
+    def forward(self, data, edge_index):
         # for each stock price and volume
         x, (embedded_input, c) = self.lstm(data)
         
                 
 #         print(embedded_input.shape)
         # I add it to the macro features (not done yet)
-        x = self.conv1(embedded_input.squeeze(dim=0), self.edge_index)
+        x = self.conv1(embedded_input.squeeze(dim=0), edge_index)
         x = self.relu(x)
-        x = self.conv2(x, self.edge_index)
+        x = self.conv2(x, edge_index)
         x = self.softmax(x)
         return x
