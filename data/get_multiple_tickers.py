@@ -7,7 +7,7 @@ import argparse
 
 def main():
 	args = parse_args()
-	ticker = args.ticker if args.ticker else "AAPL"
+	ticker_csv = args.ticker_csv
 	period = args.period if args.period else "5y"
 	start = args.start if args.start else "2017-01-01"
 	end = args.end if args.end else "2022-12-31"
@@ -79,7 +79,7 @@ def main():
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ticker', required=True)
+    parser.add_argument('--ticker_csv', required=True)
     parser.add_argument('--period', required=False)
     parser.add_argument('--start', required=False)
     parser.add_argument('--end',required=False)

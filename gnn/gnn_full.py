@@ -10,14 +10,23 @@ import torch.utils.data as data
 import sklearn.metrics as metrics
 from sklearn.preprocessing import MinMaxScaler
 
-import yfinance as yf
 from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
 
 from gnn_torch_components import gcnlstmDataset, LSTMGCN
 
 import wandb
-wandb.init(config=args)
+wandb.init(# set the wandb project where this run will be logged
+    project="gcn-madness",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": 0.01,
+    "architecture": "GCN",
+    "dataset": "AAPL",
+    "epochs": 1000,
+    }
+)
 
 
 # params
@@ -181,14 +190,32 @@ for epoch in tqdm(range(1, n_epochs + 1)):
     
     model.eval()
 
+    y_pred = None
+    y_actual = None
+    for i in range(len(test_dataset)):
+        x, y = test_dataset
+
+        x = x.to("cuda")
+        y = y.unsqueeze(0)
+
+        y_hat = model(x)
+
+        if y_pred is None:
+            y_pred = y_hat.t()
+            y_actual = y
+        else:
+            y_pred = torch.cat((y_pred, y_hat.t()), axis=0)
+            y_actual = torch.cat((y_actual, y), axis=0)
+
+    test_loss = loss_fn(y_pred, y_actual.to(device))
 
     wandb.log({
-        "train/loss": training_loss,
-        "train/acc": training_acc,
-        "val/loss": validation_loss,
-        "val/acc": validation_acc
+        "train/loss": loss.item(),
+        "test/loss": test_loss.item(),
     })
 
 
     if epoch % 100 == 0:
         torch.save(model.state_dict(),  f"LSTMGCN_{ticker}_epoch{epoch}_lookback{lookback}_lr{learning_rate}_batch{batch_size}.pth")
+
+torch.save(model.state_dict(),  f"LSTMGCN_{ticker}_epoch{n_epoch}_lookback{lookback}_lr{learning_rate}_batch{batch_size}.pth")
